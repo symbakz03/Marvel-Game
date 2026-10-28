@@ -1,0 +1,583 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Угадай героя</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one comic-issue column. Nameplate, caption strip with the current status, one action panel, a 4-up board of 24 hero panels, then the Q&A log. */
+:root{
+  --bg:#e8ecf6; --paper:#fbfcff; --ink:#151933; --muted:#586088; --line:#151933; --hard:#151933;
+  --accent:#e5383b; --on-accent:#ffffff; --pop:#ffc233; --pop-ink:#151933;
+  --good:#18915b; --on-good:#ffffff; --bad:#d6293c; --on-bad:#ffffff;
+  --f-display:'Russo One','Arial Black',Impact,sans-serif;
+  --f-body:'Rubik',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1226; --paper:#1a1e3d; --ink:#f1f3ff; --muted:#9aa2cf; --line:#6e77bd; --hard:#04050e;
+    --accent:#ff4d52; --on-accent:#14040a; --pop:#ffc233; --pop-ink:#151933;
+    --good:#3ad08c; --on-good:#04120b; --bad:#ff6b7d; --on-bad:#1a0408;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1226; --paper:#1a1e3d; --ink:#f1f3ff; --muted:#9aa2cf; --line:#6e77bd; --hard:#04050e;
+  --accent:#ff4d52; --on-accent:#14040a; --pop:#ffc233; --pop-ink:#151933;
+  --good:#3ad08c; --on-good:#04120b; --bad:#ff6b7d; --on-bad:#1a0408;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.4;
+  padding-block:16px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.wrap>section{display:flex;flex-direction:column;gap:14px;min-width:0}
+h1,h2{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance}
+h1{font-size:32px;line-height:1.05}
+h1 span{display:inline-block;background:var(--pop);color:var(--pop-ink);padding:3px 12px 5px;border:2.5px solid var(--line);box-shadow:4px 4px 0 var(--hard);transform:rotate(-1.5deg)}
+h2{font-size:18px}
+.sub{margin:10px 0 0;color:var(--muted);font-size:14px}
+.panel{background:var(--paper);border:2.5px solid var(--line);box-shadow:4px 4px 0 var(--hard);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.lbl{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.inp{width:100%;min-height:44px;padding:8px 12px;border:2.5px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px}
+.inp.code{font-family:var(--f-display);font-size:22px;letter-spacing:6px;text-align:center;text-transform:uppercase}
+.row{display:flex;gap:10px;align-items:stretch}
+.row .inp{flex:1;min-width:0}
+.btn{font-family:var(--f-display);font-size:15px;min-height:44px;padding:10px 16px;border:2.5px solid var(--line);border-radius:6px;background:var(--pop);color:var(--pop-ink);box-shadow:3px 3px 0 var(--hard);cursor:pointer}
+.btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--hard)}
+.btn:disabled{opacity:.5;cursor:default;box-shadow:none}
+.btn.red{background:var(--accent);color:var(--on-accent)}
+.btn.yes{background:var(--good);color:var(--on-good);font-size:20px;min-height:56px}
+.btn.no{background:var(--bad);color:var(--on-bad);font-size:20px;min-height:56px}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.btn.small{min-height:36px;font-size:13px;padding:6px 12px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px}
+.or::before,.or::after{content:"";flex:1;border-top:2px dashed var(--line);opacity:.5}
+.note{margin:0;font-size:13px;color:var(--muted);min-height:1em}
+.note.warn{color:var(--bad);font-weight:500}
+.how ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.how li{padding-left:2px}
+
+.gbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;border:2px solid var(--line);background:var(--paper);border-radius:99px;padding:3px 11px;font-size:13px;font-weight:500;min-width:0;max-width:100%}
+.chip b{font-family:var(--f-display);font-weight:400;letter-spacing:2px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--good)}
+.caption{font-family:var(--f-display);font-size:19px;line-height:1.2;background:var(--pop);color:var(--pop-ink);border:2.5px solid var(--line);box-shadow:3px 3px 0 var(--hard);border-radius:4px;padding:9px 12px}
+.caption.win{background:var(--good);color:var(--on-good)}
+.caption.lose{background:var(--bad);color:var(--on-bad)}
+.bigcode{font-family:var(--f-display);font-size:54px;line-height:1;letter-spacing:10px;text-align:center;background:var(--bg);border:2.5px dashed var(--line);border-radius:8px;padding:12px 0 12px 10px;user-select:all}
+.yn{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.q{font-size:18px;font-weight:500;margin:0;overflow-wrap:anywhere}
+.sgs{display:flex;flex-wrap:wrap;gap:6px}
+.sg{border:2px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btns .btn{flex:1;min-width:120px}
+
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 8px;padding-top:6px}
+.card{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;min-height:98px;padding:9px 3px 7px;background:var(--paper);color:var(--ink);border:2.5px solid var(--line);border-radius:8px;box-shadow:3px 3px 0 var(--hard);font:inherit;cursor:pointer}
+.mono{width:44px;height:44px;flex:none;display:grid;place-items:center;border-radius:50%;border:2.5px solid var(--line);font-family:var(--f-display);font-size:22px;color:#151933;
+  background:radial-gradient(rgba(255,255,255,.5) 1.2px,transparent 1.7px) 0 0/6px 6px,hsl(var(--h) 85% 64%)}
+.nm{font-size:11px;line-height:1.15;font-weight:500;text-align:center;overflow-wrap:anywhere;hyphens:auto;max-width:100%}
+.tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:var(--f-display);font-size:10px;line-height:1;padding:3px 6px;border:2px solid var(--line);border-radius:4px;background:var(--accent);color:var(--on-accent)}
+.tag:empty{display:none}
+.card.flip{opacity:.4;filter:grayscale(1);box-shadow:none;transform:translate(2px,2px)}
+.card.flip::after{content:"";position:absolute;inset:0;border-radius:6px;pointer-events:none;
+  background:
+   linear-gradient(to top right,transparent calc(50% - 1.5px),var(--ink) calc(50% - 1.5px),var(--ink) calc(50% + 1.5px),transparent calc(50% + 1.5px)),
+   linear-gradient(to bottom right,transparent calc(50% - 1.5px),var(--ink) calc(50% - 1.5px),var(--ink) calc(50% + 1.5px),transparent calc(50% + 1.5px))}
+.card.sel,.card.tgt{outline:3px solid var(--accent);outline-offset:2px}
+.card.mine{background:var(--pop);color:var(--pop-ink)}
+.card.opp{background:var(--accent);color:var(--on-accent)}
+.card.mine.opp{background:linear-gradient(135deg,var(--pop) 50%,var(--accent) 50%)}
+
+.bar{position:sticky;bottom:0;z-index:2;display:flex;flex-direction:column;gap:6px;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,transparent,var(--bg) 28%)}
+.log{display:flex;flex-direction:column;max-height:240px;overflow:auto}
+.entry{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:7px 0;border-top:2px dashed color-mix(in srgb,var(--line) 45%,transparent);font-size:14px}
+.entry:first-child{border-top:0}
+.who{font-family:var(--f-display);font-size:11px;color:var(--muted);letter-spacing:.04em}
+.entry .t{overflow-wrap:anywhere}
+.ans{font-weight:700;min-width:2.2em;text-align:right}
+.ans.y{color:var(--good)}
+.ans.n{color:var(--bad)}
+.ans.w{color:var(--muted);font-weight:400}
+.over-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.over-grid div{background:var(--bg);border:2px solid var(--line);border-radius:6px;padding:8px 10px;min-width:0}
+.over-grid small{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.over-grid strong{display:block;font-family:var(--f-display);font-weight:400;font-size:16px;overflow-wrap:anywhere}
+.foot{display:flex;gap:10px;flex-wrap:wrap}
+.fine{font-size:12px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:no-preference){
+  .card,.btn{transition:transform .08s,opacity .15s}
+}
+@media (max-width:360px){
+  .bigcode{font-size:44px;letter-spacing:6px}
+  h1{font-size:28px}
+}
+</style>
+
+<main class="wrap">
+  <header>
+    <h1><span>Угадай героя</span></h1>
+    <p class="sub">Игра для двух телефонов. Герои киновселенной Marvel.</p>
+  </header>
+
+  <section id="s-lobby">
+    <div class="panel">
+      <label class="lbl" for="nick">Твоё имя</label>
+      <input id="nick" class="inp" maxlength="16" autocomplete="off" placeholder="Игрок">
+      <button id="btn-create" class="btn red" disabled>Создать комнату</button>
+      <div class="or">или</div>
+      <label class="lbl" for="codeIn">Код комнаты друга</label>
+      <div class="row">
+        <input id="codeIn" class="inp code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="K7QM">
+        <button id="btn-join" class="btn" disabled>Войти</button>
+      </div>
+      <button id="btn-resume" class="btn ghost" hidden></button>
+      <p id="lobbyNote" class="note" role="status">Подключаемся…</p>
+    </div>
+    <div class="panel how">
+      <h2>Как играть</h2>
+      <ol>
+        <li>Один создаёт комнату и называет код. Второй вводит его у себя на телефоне.</li>
+        <li>Каждый тайно выбирает одного героя из 24.</li>
+        <li>По очереди задавайте вопросы, на которые можно ответить «да» или «нет». Ненужные карточки закрывайте.</li>
+        <li>Когда уверен, назови героя соперника. Угадал, значит победил. Ошибся, значит проиграл.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="s-game" hidden>
+    <div class="gbar">
+      <span class="chip"><b id="roomCode"></b><span id="connTxt"></span></span>
+      <span class="chip"><i class="dot" id="oppDot"></i><span id="oppName"></span></span>
+    </div>
+    <div id="msg" class="caption" role="status"></div>
+    <p id="gameNote" class="note warn" role="status" hidden></p>
+
+    <div id="p-alone" class="panel" hidden>
+      <span class="lbl">Код комнаты</span>
+      <div id="bigCode" class="bigcode"></div>
+      <div class="btns"><button id="btn-copy" class="btn small ghost">Скопировать код</button></div>
+      <p class="note">Отправь другу ссылку на эту страницу и назови код. У него: «Войти» и четыре символа.</p>
+    </div>
+
+    <div id="p-answer" class="panel" hidden>
+      <span class="lbl">Вопрос соперника</span>
+      <p id="qText" class="q"></p>
+      <div class="yn">
+        <button id="btn-yes" class="btn yes">Да</button>
+        <button id="btn-no" class="btn no">Нет</button>
+      </div>
+      <p class="note">Отвечай про своего тайного героя.</p>
+    </div>
+
+    <div id="p-ask" class="panel" hidden>
+      <label class="lbl" for="qIn">Твой вопрос</label>
+      <div class="row">
+        <input id="qIn" class="inp" maxlength="120" autocomplete="off" placeholder="Например: он умеет летать?">
+        <button id="btn-ask" class="btn red">Спросить</button>
+      </div>
+      <div id="sgs" class="sgs"></div>
+      <button id="btn-guess" class="btn ghost">Я знаю, кто это</button>
+    </div>
+
+    <div id="p-guess" class="panel" hidden>
+      <p id="gText" class="q"></p>
+      <div class="btns">
+        <button id="btn-gok" class="btn red" disabled>Да, это он</button>
+        <button id="btn-gno" class="btn ghost">Отмена</button>
+      </div>
+    </div>
+
+    <div id="p-over" class="panel" hidden>
+      <p id="ovWhy" class="q"></p>
+      <div class="over-grid">
+        <div><small>Твой герой</small><strong id="ovMine"></strong></div>
+        <div><small>Герой соперника</small><strong id="ovOpp"></strong></div>
+      </div>
+      <button id="btn-again" class="btn red">Играть ещё раз</button>
+    </div>
+
+    <div id="board" class="board" role="group" aria-label="Герои"></div>
+
+    <div id="p-pick" class="bar" hidden>
+      <button id="btn-ready" class="btn red" disabled>Выбери героя</button>
+    </div>
+
+    <div id="logWrap" class="panel" hidden>
+      <h2>Вопросы и ответы</h2>
+      <div id="log" class="log"></div>
+    </div>
+
+    <div class="foot">
+      <button id="btn-sur" class="btn small ghost" hidden>Сдаться</button>
+      <button id="btn-leave" class="btn small ghost">Выйти из комнаты</button>
+    </div>
+  </section>
+
+  <p class="fine">Неофициальная фанатская игра. Marvel и имена персонажей принадлежат их владельцам. На карточках только имена и буквы, без изображений.</p>
+</main>
+
+<script>
+(function(){
+'use strict';
+
+var CH=[
+  ['Железный человек','Тони Старк'],['Капитан Америка','Стив Роджерс'],['Тор','Сын Одина'],['Халк','Брюс Беннер'],
+  ['Чёрная вдова','Наташа Романофф'],['Соколиный глаз','Клинт Бартон'],['Чёрная пантера','Т’Чалла'],['Человек-паук','Питер Паркер'],
+  ['Доктор Стрэндж','Стивен Стрэндж'],['Алая ведьма','Ванда Максимофф'],['Человек-муравей','Скотт Лэнг'],['Капитан Марвел','Кэрол Дэнверс'],
+  ['Локи','Бог обмана'],['Танос','Безумный титан'],['Ник Фьюри','Директор Щ.И.Т.'],['Ракета','Енот-стрелок'],
+  ['Грут','Флора колосс'],['Звёздный лорд','Питер Квилл'],['Гамора','Дочь Таноса'],['Дракс','Разрушитель'],
+  ['Небула','Киборг'],['Вижн','Синтезоид'],['Сокол','Сэм Уилсон'],['Зимний солдат','Баки Барнс']
+];
+var SUGGEST=[
+  'Это мужчина?','Это женщина?','Это человек?','Есть суперсила?','Умеет летать?','Носит маску?',
+  'Это злодей?','Состоит в Мстителях?','Родом не с Земли?','Использует магию?','Есть красный цвет в костюме?','Сражается без оружия?'
+];
+
+function $(id){return document.getElementById(id)}
+var el={};
+['s-lobby','s-game','nick','btn-create','codeIn','btn-join','btn-resume','lobbyNote','roomCode','connTxt','oppDot','oppName','msg','gameNote',
+ 'p-alone','bigCode','btn-copy','p-answer','qText','btn-yes','btn-no','p-ask','qIn','btn-ask','sgs','btn-guess','p-guess','gText','btn-gok','btn-gno',
+ 'p-over','ovWhy','ovMine','ovOpp','btn-again','board','p-pick','btn-ready','logWrap','log','btn-sur','btn-leave'].forEach(function(id){el[id]=$(id)});
+
+// ---------- persistence (per phone) ----------
+var LS='mvq.guess.v1';
+function lsGet(){try{return JSON.parse(localStorage.getItem(LS)||'{}')||{}}catch(e){return {}}}
+function lsSet(o){try{localStorage.setItem(LS,JSON.stringify(o))}catch(e){}}
+var saved=lsGet();
+var cid=(typeof saved.cid==='string'&&saved.cid)?saved.cid:(Math.random().toString(36).slice(2,9)+Date.now().toString(36));
+var nick=(typeof saved.nick==='string')?saved.nick.slice(0,16):'';
+
+// ---------- game state ----------
+function fresh(rd){return {rd:rd,ready:0,qn:0,ql:'',an:0,aa:'',gn:0,gid:-1,vd:'',sec:-1,sur:0}}
+var BLANK={rd:-1,ready:0,qn:0,ql:'',an:0,aa:'',gn:0,gid:-1,vd:'',sec:-1,sur:0,valid:false};
+var S=fresh(1), O=null, oNick='', oCid=null, oLast=0;
+var mySecret=null, pick=null, flips=new Set(), log=[], seenQn=0, seenAn=0, guessing=false, guessTarget=null;
+var code=null, roomNs=null, rm=null, unsubs=[], timer=null, connected=false, permErr=false, brokenErr=false, surArmed=0, logSig='';
+
+function resetLocal(){mySecret=null;pick=null;flips=new Set();log=[];seenQn=0;seenAn=0;guessing=false;guessTarget=null;logSig=''}
+function persist(){
+  lsSet({cid:cid,nick:nick,sess:code?{code:code,S:S,sec:mySecret,flips:Array.from(flips),log:log.slice(-60),sq:seenQn,sa:seenAn}:null});
+}
+
+// ---------- helpers ----------
+function iv(x,min,max,def){x=Math.floor(Number(x));return (x>=min&&x<=max)?x:def}
+function sanitize(d){
+  return {
+    rd:iv(d.rd,0,100000,0), ready:d.ready?1:0, qn:iv(d.qn,0,1000,0), ql:String(d.ql||'').slice(0,120),
+    an:iv(d.an,0,1000,0), aa:(d.aa==='y'||d.aa==='n')?d.aa:'', gn:d.gn?1:0, gid:iv(d.gid,-1,CH.length-1,-1),
+    vd:(d.vd==='ok'||d.vd==='no')?d.vd:'', sec:iv(d.sec,-1,CH.length-1,-1), sur:d.sur?1:0, valid:true
+  };
+}
+function OE(){return (O&&O.rd===S.rd)?O:BLANK}
+function genCode(){var a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',s='';for(var i=0;i<4;i++)s+=a.charAt(Math.floor(Math.random()*a.length));return s}
+function lastOf(who){for(var i=log.length-1;i>=0;i--)if(log[i].who===who)return log[i];return null}
+
+function outcome(){
+  var o=OE();
+  if(o.sur)return {win:true,why:'Соперник сдался.'};
+  if(S.sur)return {win:false,why:'Ты сдался.'};
+  if(S.gn===1){
+    if(o.vd==='ok')return {win:true,why:'Ты угадал героя соперника.'};
+    if(o.vd==='no')return {win:false,why:'Не угадал: у соперника был другой герой.'};
+  }
+  if(o.gn===1){
+    if(S.vd==='ok')return {win:false,why:'Соперник угадал твоего героя.'};
+    if(S.vd==='no')return {win:true,why:'Соперник ошибся в догадке.'};
+  }
+  return null;
+}
+function view(){
+  var o=OE();
+  if(!oCid)return {k:'alone'};
+  var oc=outcome(); if(oc)return {k:'over',oc:oc};
+  if(!S.ready)return {k:'pick'};
+  if(!o.ready)return {k:'wait-ready'};
+  if(S.gn===1)return {k:'wait-verdict'};
+  if(o.qn>S.an)return {k:'answer',q:o.ql};
+  if(S.qn>o.an)return {k:'wait-answer'};
+  var first=(cid<oCid)===(S.rd%2===1);
+  var mine=S.qn<o.qn||(S.qn===o.qn&&first);
+  return {k:mine?'my-turn':'opp-turn'};
+}
+
+// ---------- network ----------
+function payload(){var p={cid:cid,nick:nick||'Игрок'};for(var k in S)p[k]=S[k];return p}
+function emitNow(){
+  if(!rm)return;
+  rm.emit('st',payload()).catch(function(e){
+    if(e&&e.code==='not_permitted'){permErr=true;render()}
+  });
+}
+function onErr(){brokenErr=true;render()}
+function onMsg(m){
+  var d=m&&m.data;
+  if(!d||typeof d!=='object'||m.isMe)return;
+  if(typeof d.cid!=='string'||!d.cid||d.cid===cid)return;
+  if(oCid&&d.cid!==oCid){
+    if(Date.now()-oLast>20000){oCid=d.cid;O=null}else return;
+  }
+  oCid=d.cid; oLast=Date.now();
+  oNick=String(d.nick||'').slice(0,16);
+  var o=sanitize(d);
+  if(o.rd>S.rd){startRound(o.rd,true)}
+  O=o;
+  step();
+  render();
+}
+function step(){
+  var o=OE(); if(!o.valid)return;
+  var changed=false;
+  if(o.qn>seenQn){log.push({who:'opp',q:o.ql,a:''});seenQn=o.qn}
+  if(o.an>seenAn){var e=lastOf('me');if(e)e.a=o.aa;seenAn=o.an}
+  if(o.gn===1&&S.vd===''&&mySecret!==null){S.vd=(o.gid===mySecret)?'ok':'no';S.sec=mySecret;changed=true}
+  if((o.sec>=0||o.sur)&&S.sec<0&&mySecret!==null){S.sec=mySecret;changed=true}
+  if(changed)emitNow();
+  persist();
+}
+function startRound(rd,fromPeer){
+  S=fresh(rd); resetLocal(); surArmed=0;
+  persist();
+  if(fromPeer||rm)emitNow();
+}
+
+// ---------- room lifecycle ----------
+function enter(c,restore){
+  if(!roomNs)return;
+  setBusy(true);
+  roomNs.join('mv-'+c.toLowerCase()).then(function(r){
+    rm=r; code=c; permErr=false; brokenErr=false; connected=r.connected();
+    if(!restore){S=fresh(1);resetLocal();O=null;oCid=null;oNick='';oLast=0}
+    unsubs=[
+      r.on('st',onMsg,onErr),
+      r.onPeers(function(ch){for(var i=0;i<ch.joined.length;i++){if(!ch.joined[i].isMe){emitNow();break}}},onErr),
+      r.onConnection(function(c2){connected=c2;render()},onErr)
+    ];
+    timer=setInterval(function(){emitNow();render()},2000);
+    nick=nick||'Игрок';
+    persist(); show('game'); emitNow(); render(); setBusy(false);
+  }).catch(function(){
+    setBusy(false);
+    lobbyNote('Не удалось войти в комнату. Проверь код и попробуй ещё раз.',true);
+  });
+}
+function leave(){
+  clearInterval(timer); timer=null;
+  unsubs.forEach(function(f){try{f()}catch(e){}}); unsubs=[];
+  if(rm){try{rm.leave().catch(function(){})}catch(e){}}
+  rm=null; code=null; O=null; oCid=null; oNick=''; S=fresh(1); resetLocal();
+  persist(); show('lobby'); lobbyIdle();
+}
+
+// ---------- actions ----------
+function doReady(){if(pick===null||S.ready)return;mySecret=pick;S.ready=1;persist();emitNow();render()}
+function doAsk(){
+  var t=el.qIn.value.replace(/\s+/g,' ').trim().slice(0,120); if(!t)return;
+  S.qn++; S.ql=t; log.push({who:'me',q:t,a:''}); el.qIn.value='';
+  persist(); emitNow(); render();
+}
+function doAnswer(a){
+  var o=OE(); if(!(o.qn>S.an))return;
+  S.an=o.qn; S.aa=a; var e=lastOf('opp'); if(e)e.a=a;
+  persist(); emitNow(); render();
+}
+function doGuessOk(){
+  if(guessTarget===null)return;
+  S.gn=1; S.gid=guessTarget; guessing=false; persist(); emitNow(); render();
+}
+function doSurrender(){
+  if(!surArmed||Date.now()-surArmed>3500){surArmed=Date.now();render();setTimeout(render,3600);return}
+  surArmed=0; S.sur=1; S.sec=(mySecret===null)?-1:mySecret; persist(); emitNow(); render();
+}
+function onCard(i){
+  var v=view();
+  if(v.k==='pick'){pick=i;render();return}
+  if(v.k==='my-turn'&&guessing){guessTarget=i;render();return}
+  if(v.k==='alone'||v.k==='over')return;
+  if(flips.has(i))flips.delete(i);else flips.add(i);
+  persist(); render();
+}
+
+// ---------- rendering ----------
+function show(w){el['s-lobby'].hidden=(w!=='lobby');el['s-game'].hidden=(w!=='game')}
+function setBusy(b){el['btn-create'].disabled=b||!roomNs;el['btn-join'].disabled=b||!roomNs}
+function lobbyNote(t,warn){el.lobbyNote.textContent=t;el.lobbyNote.className='note'+(warn?' warn':'')}
+function lobbyIdle(){
+  setBusy(false);
+  if(roomNs)lobbyNote('');
+  else lobbyNote('Онлайн-режим недоступен. Открой игру через Claude, войдя в аккаунт, и убедись, что владелец дал тебе доступ к странице.',true);
+}
+
+var cards=[];
+function buildBoard(){
+  CH.forEach(function(c,i){
+    var b=document.createElement('button');
+    b.type='button'; b.className='card'; b.style.setProperty('--h',String(i*15));
+    var tag=document.createElement('span');tag.className='tag';
+    var m=document.createElement('span');m.className='mono';m.textContent=c[0].charAt(0);m.setAttribute('aria-hidden','true');
+    var n=document.createElement('span');n.className='nm';n.textContent=c[0];
+    b.appendChild(tag);b.appendChild(m);b.appendChild(n);
+    b.setAttribute('aria-label',c[0]+', '+c[1]);
+    b.addEventListener('click',function(){onCard(i)});
+    el.board.appendChild(b); cards.push({b:b,tag:tag});
+  });
+}
+function buildSuggest(){
+  SUGGEST.forEach(function(t){
+    var b=document.createElement('button');b.type='button';b.className='sg';b.textContent=t;
+    b.addEventListener('click',function(){el.qIn.value=t;el.qIn.focus()});
+    el.sgs.appendChild(b);
+  });
+}
+var MSG={
+  'alone':'Ждём второго игрока',
+  'pick':'Выбери тайного героя',
+  'wait-ready':'Соперник выбирает героя…',
+  'my-turn':'Твой ход: задай вопрос',
+  'opp-turn':'Ходит соперник…',
+  'answer':'Ответь на вопрос',
+  'wait-answer':'Ждём ответ соперника…',
+  'wait-verdict':'Проверяем твою догадку…'
+};
+function render(){
+  if(!code||el['s-game'].hidden)return;
+  var v=view(), k=v.k, o=OE();
+
+  el.roomCode.textContent=code;
+  el.connTxt.textContent=connected?'в сети':'нет связи';
+  var online=oCid&&(Date.now()-oLast<7000);
+  el.oppDot.className='dot'+(online?' on':'');
+  el.oppName.textContent=oCid?((oNick||'Соперник')+(online?'':' · не в сети')):'Соперник не вошёл';
+
+  if(permErr){el.gameNote.hidden=false;el.gameNote.textContent='У тебя нет прав отправлять ходы. Попроси владельца страницы выдать доступ уровня «Участник» или выше.'}
+  else if(brokenErr){el.gameNote.hidden=false;el.gameNote.textContent='Связь с комнатой прервана. Выйди из комнаты и зайди снова.'}
+  else el.gameNote.hidden=true;
+
+  if(k==='over'){
+    el.msg.className='caption '+(v.oc.win?'win':'lose');
+    el.msg.textContent=v.oc.win?'Победа!':'Поражение';
+  }else{
+    el.msg.className='caption';
+    el.msg.textContent=(k==='my-turn'&&guessing)?'Выбери героя соперника на поле':MSG[k];
+  }
+
+  el['p-alone'].hidden=(k!=='alone');
+  el.bigCode.textContent=code;
+  el['p-answer'].hidden=(k!=='answer');
+  if(k==='answer')el.qText.textContent=v.q;
+  el['p-ask'].hidden=!(k==='my-turn'&&!guessing);
+  el['p-guess'].hidden=!(k==='my-turn'&&guessing);
+  if(!el['p-guess'].hidden){
+    el.gText.textContent=(guessTarget===null)?'Нажми на карточку героя, которого хочешь назвать.':'Это «'+CH[guessTarget][0]+'»?';
+    el['btn-gok'].disabled=(guessTarget===null);
+  }
+  el['p-over'].hidden=(k!=='over');
+  if(k==='over'){
+    el.ovWhy.textContent=v.oc.why;
+    el.ovMine.textContent=(mySecret!==null)?CH[mySecret][0]:'—';
+    el.ovOpp.textContent=(o.sec>=0)?CH[o.sec][0]:'—';
+  }
+  el.board.hidden=(k==='alone');
+  el['p-pick'].hidden=(k!=='pick');
+  if(k==='pick'){
+    el['btn-ready'].disabled=(pick===null);
+    el['btn-ready'].textContent=(pick===null)?'Выбери героя':'Готов: «'+CH[pick][0]+'»';
+  }
+
+  for(var i=0;i<cards.length;i++){
+    var c=cards[i], isMine=(k!=='pick'&&k!=='alone'&&mySecret===i), isOpp=(k==='over'&&o.sec===i);
+    c.b.classList.toggle('flip',flips.has(i)&&k!=='pick');
+    c.b.classList.toggle('sel',k==='pick'&&pick===i);
+    c.b.classList.toggle('tgt',k==='my-turn'&&guessing&&guessTarget===i);
+    c.b.classList.toggle('mine',isMine);
+    c.b.classList.toggle('opp',isOpp);
+    c.tag.textContent=(isMine&&isOpp)?'У ОБОИХ':(isMine?'ТВОЙ':(isOpp?'У СОПЕРНИКА':''));
+    c.b.setAttribute('aria-pressed',flips.has(i)?'true':'false');
+  }
+
+  var sig=JSON.stringify(log);
+  if(sig!==logSig){
+    logSig=sig; el.log.textContent='';
+    log.forEach(function(e){
+      var row=document.createElement('div');row.className='entry';
+      var w=document.createElement('span');w.className='who';w.textContent=(e.who==='me')?'ТЫ':'ОН';
+      var t=document.createElement('span');t.className='t';t.textContent=e.q;
+      var a=document.createElement('span');a.className='ans '+(e.a==='y'?'y':e.a==='n'?'n':'w');
+      a.textContent=(e.a==='y')?'Да':(e.a==='n')?'Нет':'…';
+      row.appendChild(w);row.appendChild(t);row.appendChild(a);el.log.appendChild(row);
+    });
+    el.log.scrollTop=el.log.scrollHeight;
+  }
+  el.logWrap.hidden=(log.length===0);
+
+  var canSur=(['wait-ready','my-turn','opp-turn','answer','wait-answer','wait-verdict'].indexOf(k)>=0);
+  el['btn-sur'].hidden=!canSur;
+  el['btn-sur'].textContent=(surArmed&&Date.now()-surArmed<3500)?'Точно сдаться?':'Сдаться';
+}
+
+// ---------- wiring ----------
+function normCode(s){return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4)}
+function readNick(){nick=el.nick.value.replace(/\s+/g,' ').trim().slice(0,16)||'Игрок';persist()}
+
+el.nick.value=nick;
+el.nick.addEventListener('input',function(){nick=el.nick.value.replace(/\s+/g,' ').trim().slice(0,16);persist()});
+el['btn-create'].addEventListener('click',function(){readNick();enter(genCode(),false)});
+el['btn-join'].addEventListener('click',function(){
+  readNick(); var c=normCode(el.codeIn.value);
+  if(c.length<4){lobbyNote('Код состоит из четырёх символов.',true);return}
+  enter(c,false);
+});
+el.codeIn.addEventListener('input',function(){el.codeIn.value=normCode(el.codeIn.value)});
+el.codeIn.addEventListener('keydown',function(e){if(e.key==='Enter')el['btn-join'].click()});
+el['btn-resume'].addEventListener('click',function(){
+  var s=saved.sess; if(!s||!s.code)return;
+  readNick();
+  try{
+    S=Object.assign(fresh(1),s.S||{});
+    mySecret=(typeof s.sec==='number')?s.sec:null;
+    flips=new Set(Array.isArray(s.flips)?s.flips:[]);
+    log=Array.isArray(s.log)?s.log.slice(-60):[];
+    seenQn=iv(s.sq,0,1000,0); seenAn=iv(s.sa,0,1000,0);
+  }catch(e){S=fresh(1);resetLocal()}
+  enter(String(s.code),true);
+});
+el['btn-copy'].addEventListener('click',function(){
+  var done=function(t){el['btn-copy'].textContent=t;setTimeout(function(){el['btn-copy'].textContent='Скопировать код'},1800)};
+  try{navigator.clipboard.writeText(code).then(function(){done('Скопировано')},function(){done('Выдели код вручную')})}catch(e){done('Выдели код вручную')}
+});
+el['btn-ready'].addEventListener('click',doReady);
+el['btn-ask'].addEventListener('click',doAsk);
+el.qIn.addEventListener('keydown',function(e){if(e.key==='Enter')doAsk()});
+el['btn-yes'].addEventListener('click',function(){doAnswer('y')});
+el['btn-no'].addEventListener('click',function(){doAnswer('n')});
+el['btn-guess'].addEventListener('click',function(){guessing=true;guessTarget=null;render()});
+el['btn-gno'].addEventListener('click',function(){guessing=false;guessTarget=null;render()});
+el['btn-gok'].addEventListener('click',doGuessOk);
+el['btn-again'].addEventListener('click',function(){startRound(S.rd+1,false);render()});
+el['btn-sur'].addEventListener('click',doSurrender);
+el['btn-leave'].addEventListener('click',leave);
+
+buildBoard(); buildSuggest();
+if(saved.sess&&saved.sess.code){
+  el['btn-resume'].hidden=false;
+  el['btn-resume'].textContent='Вернуться в комнату '+String(saved.sess.code).slice(0,4);
+}
+
+function roomReady(r){roomNs=r||null;lobbyIdle()}
+try{
+  if(window.claude&&typeof window.claude.use==='function'){
+    window.claude.use('room').then(roomReady,function(){roomReady(null)});
+  }else{roomReady(null)}
+}catch(e){roomReady(null)}
+})();
+</script>
+
+</body></html>
